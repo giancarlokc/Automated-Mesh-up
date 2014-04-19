@@ -1,1 +1,12 @@
-Soon...
+Automatic Support for Digital Mashups
+
+Authors:
+  Giancarlo Camilo  - http://github.com/giancarlokc
+  Thiago Lima       - http://github.com/thiagorcdl
+  Rafael Salles
+
+########################################
+
+The GUI currently requires the installation of PyGame.
+
+http://pygame.org/download.shtml
