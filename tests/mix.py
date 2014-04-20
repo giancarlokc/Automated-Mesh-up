@@ -31,7 +31,7 @@ def mix(src_path, tgt_paths, n_fft = 4096, hop_length = 1024):
           closest = target[i]
       except IndexError:
         del targets[target]
-    maxsrc = max(src_stft[i])
+    maxsrc = max(src_mag[i])
     maxtgt = max(closest)
     src_mag[i][:cap] += closest[:cap]
     src_mag[i][:cap] = maxsrc * src_mag[i][:cap] / (maxsrc+maxtgt)
