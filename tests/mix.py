@@ -1,33 +1,83 @@
 import librosa
 import numpy as np
 from numpy.linalg import norm
+from wrappers import *
 
 n_fft = 4096
 hop_length = 1024
 
-src_path = "/Media/panic-sweat-4s.wav"
+src_path = "/Media/stroppa-rub-60s.wav"
 tgt_path = "/Media/protest-hair-4s-mono.wav"
-tgt_paths = ["/Media/protest-hair-4s-mono.wav", 
-             "/Media/protest-lavie-4s-mono.wav", 
-             "/Media/protest-tandem-4s-mono.wav"]
+tgt_paths = ["/Media/sade-ordinary-40s.wav", 
+             "/Media/skrillex-weekends-40s.wav",
+             "/Media/unvisage-40s.wav"]
+
+class Sound:
+  spectra = None
+  chromagram = None
+  mfcc = None
+
+  def __init__(self, path):
+      self.path = path
+      signal, sr = librosa.load(path)      
+      self.signal = signal
+      self.sr = sr
+
+  def getChromagram(self, n_fft = 4096, hop_length = 1024):
+    if self.chromagram == None:      
+      if self.spectra == None:
+        stft = librosa.stft(self.signal, n_fft, hop_length)
+        self.spectra = Spectra(stft, self.sr, n_fft, hop_length)
+      self.chromagram = librosa.feature.chromagram(S=self.spectra.getMagnitude())    
+    return self.chromagram
+  
+  def getMfcc(self):
+    #IMPLEMENT
+    if self.mfcc == None:
+      self.mfcc = librosa.feature.mfcc(y=self.signal, sr=self.sr)    
+    return self.mfcc
+  
+  def getSpectra(self, n_fft = 4096, hop_length = 1024):
+    if self.spectra == None:
+      stft = librosa.stft(self.signal, n_fft, hop_length)
+      self.spectra = Spectra(stft, self.sr, n_fft, hop_length)
+    elif self.spectra.n_fft != n_fft or self.spectra.hop_length != hop_length:
+      stft = librosa.stft(self.signal, n_fft, hop_length)
+      return Spectra(stft, self.sr, n_fft, hop_length)
+    return self.spectra
 
 class Spectra:
-  magnitude = None
-  phase = None
+  stft = None
   sr = None
-  def __init__(self, magnitude, phase, sr):
-    self.magnitude = magnitude
-    self.phase = phase
-    self.sr = sr
+  n_fft = None
+  hop_length = None
 
-def mix(src_path, tgt_paths, n_fft = 4096, hop_length = 1024):
+  def __init__(self, stft, sr, n_fft, hop_length):
+    self.stft = stft
+    self.sr = sr
+    self.n_fft = n_fft
+    self.hop_length = hop_length
+
+  def getMagnitude(self, idx = None):
+    if idx == None:
+      return np.abs(self.stft)
+    return np.abs(self.stft[idx])
+  
+  def getPhase(self, idx = None):
+    if idx == None:
+      return np.angle(self.stft)
+    return np.angle(self.stft[idx])
+
+
+def mix_by_spectogram(src_path, tgt_paths, n_fft = 4096, hop_length = 1024):
   #STFT from source
   src_signal, sr = librosa.load(src_path)
   src_stft = librosa.stft(src_signal, n_fft, hop_length)
   src_mag, src_phase = librosa.magphase(src_stft)
   src_spectra = Spectra(src_mag, src_phase, sr)
   targets = {}
-  
+
+
   #STFT from paths
   for path in tgt_paths:
     signal, sr = librosa.load(path)
@@ -100,4 +150,63 @@ def mix_strategies(src, tgt):
   src_mag[i][:cap] = closest.magnitude[i][:cap]
   src_phase[i][:cap] = closest.phase[i][:cap]
   """
+
+def mix_by_chromagram(src_path, tgt_paths, n_fft = 4096, hop_length = 1024):
+  print "create source sound"
+  src_sound = Sound(src_path)
+  targets = {}
+
+  print "create target sounds"
+  if isinstance(tgt_paths, list):
+    for path in tgt_paths:
+      tgt_sound = Sound(tgt_path)
+      targets[path] = tgt_sound
+  else:
+    tgt_sound = Sound(tgt_paths)
+    targets[tgt_paths] = tgt_sound
+
+  #zeros chromagram
+  zeros = src_sound.getChromagram()[0]*0
+  
+  #IMPLEMENT cut all arrays such that they have same length!
+  print "create temporary magnitude and phase containers"
+  tmp_mag = None
+  tmp_phase = None
+
+  ratio = len(src_sound.getSpectra().getMagnitude()) / len(src_sound.getChromagram()[0])
+  print "block size", ratio
+
+  #Compute distances
+  print "compute distances"
+  for i in range(len(src_sound.getChromagram()[0]) -1):
+    print "computing frame block", i
+    distance = None
+    closest = zeros
+    for target in targets.values():      
+      try:
+        new_dist = norm(np.transpose(target.getChromagram())[i] - np.transpose(src_sound.getChromagram())[i])
+        if new_dist < distance or distance == None:
+          distance = new_dist
+          closest = target.spectra
+      except IndexError:
+        print 'IDX Error'
+    try:
+      cap = min(len(closest.getMagnitude(i)) , len(src_sound.spectra.getMagnitude(i)))
+      #Add magnitudes and phases
+      for j in range(ratio):
+        if tmp_mag == None:
+          tmp_mag = src_sound.spectra.getMagnitude(i*ratio + j)[:cap] + closest.getMagnitude(i*ratio+j)[:cap]
+          tmp_phase = src_sound.spectra.getPhase(i*ratio +j)[:cap] + closest.getPhase(i*ratio + j)[:cap]
+        else: 
+          tmp_mag = np.vstack((tmp_mag, src_sound.spectra.getMagnitude(i*ratio +j)[:cap] + closest.getMagnitude(i*ratio+j)[:cap]))
+          tmp_phase = np.vstack((tmp_phase, src_sound.spectra.getPhase(i*ratio +j)[:cap] + closest.getPhase(i*ratio + j)[:cap]))    
+    except AttributeError:
+      print 'Attribute Error'
+    
+  #Average magnitudes and phases
+  tmp_mag *= 0.5
+  tmp_phase *= 0.5  
+    
+  signal = librosa.istft(tmp_mag * tmp_phase)
+  librosa.output.write_wav(src_sound.path[:-4]+"-mix.wav", signal, 2*src_sound.sr)
 
