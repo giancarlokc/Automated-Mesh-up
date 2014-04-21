@@ -9,6 +9,7 @@ interface.startMenu(music_data)
 interface.startScrollBox()
 interface.startTargetButton()
 interface.startMatchButton()
+interface.startMeshupPlay()
 
 
 

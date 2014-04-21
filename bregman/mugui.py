@@ -3,12 +3,15 @@ import tkMessageBox
 from tkFileDialog import askopenfilename
 import tkHyperlinkManager
 import scipy.io.wavfile as sci
+from bregman.suite import *
 import numpy as np
 import mumusic
 import mumatch
 import muplot
 import mumfcc
 import mudb
+import os
+import pygame
 
 class Interface:
 	music_list = list()
@@ -23,6 +26,8 @@ class Interface:
 	matchON = []
 	matchIndex = []
 	matchTFrame = []
+	meshupSource1Label = 0
+	meshupSource2Label = 0
 	
 	# Example:        "TITLE", "900x600"
 	def __init__(self, title, resolution):
@@ -67,7 +72,17 @@ class Interface:
 				return
 				
 		print "   Music NOT found, extracting music information..."
-		tmp = mudb.MusicData(mumusic.getFilename(filename), mumfcc.extractMFCC(filename))
+		
+		# Calls beat-tracking command
+		os.system("ibt %s" % filename)
+		# Calls MFCC extraction algorithm
+		os.system("python extract.py %s %s" % (filename,mumusic.getFilename(filename)))
+		# Reads the output of both programs
+		t = open('%s_medianTempo.txt' % mumusic.getFilename(filename)[:-4],'r')
+		m = open('%s.txt' % mumusic.getFilename(filename)[:-4],'r')
+		feats = m.readline()
+		
+		tmp = mudb.MusicData(mumusic.getFilename(filename), feats, int(t.readline()))
 		music_data.append(tmp)
 		self.music_list[-1].data = music_data[-1]
 		mudb.syncDB(music_data)
@@ -155,6 +170,7 @@ class Interface:
 		# Set TARGET global variables
 		self.targetON = True
 		self.targetIndex = a[0]
+		self.meshupSource1Label.config(text=("Target: "+self.music_list[int(self.targetIndex[0])].name))
 		# Open target music frame
 		print "Opening TARGET frame..."
 		self.openTargetFrame(self.targetIndex)
@@ -175,8 +191,32 @@ class Interface:
 		self.matchON = True
 		# Find a MATCH for the TARGET music
 		self.matchIndex = mumatch.avgBandMFCC(self.targetIndex, self.music_list)
+		self.meshupSource2Label.config(text=("Match: "+self.music_list[int(self.matchIndex)].name))
 		print "Opening MATCH frame..."
 		self.openMatchFrame(self.matchIndex)
+		
+	def playMeshup(self, period):
+		if(len(self.targetIndex) > 0):
+			if(int(self.targetIndex[0]) >= len(self.music_list)):
+				print "Target and Match musics are not selected."
+				tkMessageBox.showwarning("Error", "Target and Match musics are not selected.")
+				return
+		else:
+			print "Target music is not selected."
+			tkMessageBox.showwarning("Error", "Target music is not selected.")
+			return
+		if(self.matchIndex >= len(self.music_list)):
+			print "Match music is not selected."
+			tkMessageBox.showwarning("Error", "Match music is not selected.")
+			return
+		music_dir = mumusic.meshupSongs(self.music_list[int(self.targetIndex[0])].directory, self.music_list[self.matchIndex].directory, period)
+		
+		pygame.mixer.music.load(music_dir)
+		pygame.mixer.music.play()
+		time.sleep(2)
+		pygame.mixer.music.set_volume(1)
+		
+		return True
 	
 	###################################################### Main menu ##
 	def startMenu(self, music_data):
@@ -232,6 +272,42 @@ class Interface:
 		myframe3.place(x=122, y=180)
 		b2 = Button(myframe3, text="Match", command=lambda:self.selectMatch(), anchor="w")
 		b2.pack()
+		
+	def startMeshupPlay(self):
+		# MAIN FRAME
+		meshupFrame = Frame(self.main_window, relief=GROOVE, width=690, height=200, bd=1)
+		meshupFrame.place(x=200, y=10)
+		mainLabelFrame = Frame(meshupFrame, relief=GROOVE, width=400, height=30, bd=1)
+		mainLabelFrame.place(x=0, y=0)
+		labelMain = Label(mainLabelFrame, text="Meshup Menu")
+		labelMain.pack()
+		# SOURCES PANEL
+		sourcesFrame = Frame(meshupFrame, relief=GROOVE, width=145, height=145, bd=1)
+		sourcesFrame.place(x=10, y=40)
+		labelSFrame = Frame(sourcesFrame, relief=GROOVE, width=145, height=100, bd=1)
+		labelSFrame.place(x=0, y=0)
+		labelSources = Label(labelSFrame, text="Sources")
+		labelSources.pack()
+		musicSourceFrame = Frame(sourcesFrame, relief=GROOVE, width=120, height=115, bd=0)
+		musicSourceFrame.place(x=10, y=30)
+		self.meshupSource1Label = Label(musicSourceFrame, height=3, width=14, text="Target: None")
+		self.meshupSource1Label.grid(row=0)
+		self.meshupSource2Label = Label(musicSourceFrame, height=3, width=14, text="Mtach: None")
+		self.meshupSource2Label.grid(row=1)
+		# ENTRY FRAME
+		meshupFrameEntry = Frame(meshupFrame, relief=GROOVE, width=100, height=30, bd=1)
+		meshupFrameEntry.place(x=380, y=142)
+		periodEntry = Entry(meshupFrameEntry, width=11, bd=5)
+		periodEntry.pack()
+		labelEntry = Label(meshupFrameEntry, text="(Segmentation in secs)")
+		labelEntry.pack()
+		# MESHUP BUTTON
+		meshupButtonFrame = Frame(meshupFrame, relief=GROOVE, width=100, height=30, bd=3)
+		meshupButtonFrame.place(x=535, y=142)
+		b = Button(meshupButtonFrame, text="Play Meshup", width=14, height=2,command=lambda:self.playMeshup(periodEntry.get()), anchor="center")
+#		b = Button(meshupButtonFrame, text="Play Meshup", anchor="w")
+		
+		b.pack()
 	
 	###################################################### Main loop ##
 	def startLoop(self):

@@ -23,15 +23,27 @@ def avgBand(F):
 	return x
 
 # Get the MFCC from a music and return the feature class
-def getMFCC(x):
-	print "Extracting MFCC from ", x, "..."
-	F = LogFrequencyCepstrum(x, nhop=2205)
+def getMFCC(audio_file):
+#	print "Extracting MFCC from ", x, "..."
+#	F = LogFrequencyCepstrum(x, nhop=2205)
 #	F.feature_plot(normalize=True)
 #	title('Mel-Frequency Cepstral Coefficients')
-	# Show F matrix lenght
-	print "   Lines: ", len(F.X)
-	print "   Colums: ", len(F.X[0])
-	return F
+#	# Show F matrix lenght
+#	print "   Lines: ", len(F.X)
+#	print "   Colums: ", len(F.X[0])
+#	return F
+	
+	
+	#print "\nExtracting MFCC from ", x, "..."
+	F = LogFrequencyCepstrum(audio_file, nfft=16384, wfft=8192, nhop=2205)
+	F.x.close()
+	x = []
+	stds=0
+	for i in range(len(F.X)):
+		x.append(np.mean(F.X[i]))
+		stds+=np.std(F.X[i])
+	x.append(stds/len(F.X))
+	return x
 	
 # Compare 2 avg band arrays
 def cmpAvgMFCC(avg1, avg2):
@@ -49,14 +61,15 @@ def cmpAvgMFCC(avg1, avg2):
 def extractMFCC(audio_name):
 	audio_file = os.path.join(".",audio_name)
 	
-	features = getMFCC(audio_file)
-	avg = avgBand(features)
+	avg = getMFCC(audio_file)
+	
 	string = ""
 	for i in range(len(avg)):
 		if(i != 0):
 			string = string + " "
 		string = string + str(avg[i])
 	return string
+
 	
 	
 	

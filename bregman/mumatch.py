@@ -1,4 +1,7 @@
 ###################################################### Matching funtions ##
+
+from numpy import *
+
 # Find a random match for the TARGET music
 def randomMatch(targetIndex, music_list):
 	from random import randint
@@ -9,6 +12,10 @@ def randomMatch(targetIndex, music_list):
 	print "   Match: ", music_list[a].name
 	print "#############################"
 	return a
+	
+def euclDist(a,b):
+	dist = [float((a[i]-b[i])**2) for i in range(len(a))]
+	return sqrt(sum(dist))
 	
 # Find the closest match to the TARGET using an average for a 10-Band MFCC
 def avgBandMFCC(targetIndex, music_list):
@@ -28,7 +35,8 @@ def avgBandMFCC(targetIndex, music_list):
 			for j in range(len(b)):
 				b[j] = float(b[j])
 		
-			diff = mumfcc.cmpAvgMFCC(a, b)
+			#diff = mumfcc.cmpAvgMFCC(a, b)
+			diff = euclDist(a, b)
 			if(diff < smallestDiff):
 				smallestDiff = diff
 				index = i
