@@ -17,12 +17,22 @@ def meshupSongs(audio1, audio2, step):
 	print "Song 1:"
 	print "   Size: ", len(x)
 	print "   Sample Rate: ", y
+	print "   Shape: ", len(x.shape)
 	print x
 
 	print "Song 2:"
 	print "   Size: ", len(x1)
 	print "   Sample Rate: ", y1
+	print "   Shape: ", len(x1.shape)
 	print x1
+	
+	if(len(x.shape) != len(x1.shape)):
+		print "Can't concatenating with different number of channels..."
+		return False		
+	
+	if(y != y1):
+		print "Can't concatenating with different sample rates..."
+		return False
 	
 	# Concatenate songs
 	result = numpy.concatenate([x, x1])
@@ -32,6 +42,7 @@ def meshupSongs(audio1, audio2, step):
 	x1_end = step
 	final_begin = 0
 	final_end = step
+	var = True
 	while(x_end < len(x) and x1_end < len(x1)):
 		diff = 0
 		if(x_end >= len(x)):
@@ -41,9 +52,11 @@ def meshupSongs(audio1, audio2, step):
 			diff = x1_end - len(x1) + 1
 			x1_end = len(x1) - 1
 		
+#		if(var):
 		result[final_begin:final_end] = x[x_begin:x_end]
 		final_begin = final_begin + step
 		final_end = final_end + step
+#		if(not var):
 		result[final_begin:final_end] = x1[x1_begin:x1_end]
 		final_begin = final_begin + step
 		final_end = final_end + step
@@ -54,14 +67,9 @@ def meshupSongs(audio1, audio2, step):
 		x1_end = x1_end + step
 		final_x = False
 		final_x1 = False
-		
-
-	if(y != y1):
-		print "Concatenating with different sample rates..."
-	else:
-		print "Concatenating with equal sample rates..."
+		var = not var
 	
-	print "Saving as: tmp.wav" 
+	print "Saving as: tmp.wav"
 	wavwrite(result, "tmp.wav", y)
 	return "tmp.wav"
 

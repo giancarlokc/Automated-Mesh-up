@@ -12,6 +12,8 @@ import mumfcc
 import mudb
 import os
 import pygame
+from PIL import Image
+from PIL import ImageTk
 
 class Interface:
 	music_list = list()
@@ -33,6 +35,12 @@ class Interface:
 	def __init__(self, title, resolution):
 		# Create window #
 		self.main_window = Tk()
+		image2 =Image.open("image.gif")
+		image1 = ImageTk.PhotoImage(image2)
+		background_label = Label(self.main_window, image=image1)
+		background_label.photo=image1
+		background_label.place(x=0, y=0, relwidth=1, relheight=1)
+		self.main_window.configure(background='grey')
 		self.main_window.title(title)
 		self.main_window.geometry(resolution)
 	
@@ -83,6 +91,8 @@ class Interface:
 		feats = m.readline()
 		
 		tmp = mudb.MusicData(mumusic.getFilename(filename), feats, int(t.readline()))
+		os.remove('%s_medianTempo.txt' % mumusic.getFilename(filename)[:-4])
+		os.remove('%s.txt' % mumusic.getFilename(filename)[:-4])
 		music_data.append(tmp)
 		self.music_list[-1].data = music_data[-1]
 		mudb.syncDB(music_data)
@@ -114,7 +124,7 @@ class Interface:
 	
 	###################################################### Open window frame for the target/match music ##
 	def openTargetFrame(self, index):
-		print "   Selected file: " + self.music_list[int(index[0])].name
+		print "   Selected file: " + self.music_list[int(index)].name
 		targetTOTAL=Frame(self.main_window, relief=GROOVE, bd=1)
 		targetTOTAL.place(x=10, y=240)
 		self.targetTFrame = targetTOTAL
@@ -125,8 +135,8 @@ class Interface:
 		targetTitleFixed.grid(row=0,column=0)
 		targetTitle = Label(targetFrame, text=" ")
 		targetTitle.grid(row=0,column=1)
-		targetPlay = Button(targetFrame, text="Play", height=4, width=7, command=lambda:self.playButton(int(index[0]), targetTitle))
-		targetPause = Button(targetFrame, text="Pause", command=lambda:self.pauseButton(int(index[0]), targetTitle), height=4, width=7)
+		targetPlay = Button(targetFrame, text="Play", height=4, width=7, command=lambda:self.playButton(int(index), targetTitle))
+		targetPause = Button(targetFrame, text="Pause", command=lambda:self.pauseButton(int(index), targetTitle), height=4, width=7)
 		targetPlay.grid(row=1, column=0)
 		targetPause.grid(row=1, column=1)
 		targetFrame2=Frame(targetTOTAL,relief=GROOVE,width=120,height=150,bd=1)
@@ -170,7 +180,7 @@ class Interface:
 		# Set TARGET global variables
 		self.targetON = True
 		self.targetIndex = a[0]
-		self.meshupSource1Label.config(text=("Target: "+self.music_list[int(self.targetIndex[0])].name))
+		self.meshupSource1Label.config(text=("Target: "+self.music_list[int(self.targetIndex)].name))
 		# Open target music frame
 		print "Opening TARGET frame..."
 		self.openTargetFrame(self.targetIndex)
@@ -197,7 +207,7 @@ class Interface:
 		
 	def playMeshup(self, period):
 		if(len(self.targetIndex) > 0):
-			if(int(self.targetIndex[0]) >= len(self.music_list)):
+			if(int(self.targetIndex) >= len(self.music_list)):
 				print "Target and Match musics are not selected."
 				tkMessageBox.showwarning("Error", "Target and Match musics are not selected.")
 				return
@@ -209,12 +219,18 @@ class Interface:
 			print "Match music is not selected."
 			tkMessageBox.showwarning("Error", "Match music is not selected.")
 			return
-		music_dir = mumusic.meshupSongs(self.music_list[int(self.targetIndex[0])].directory, self.music_list[self.matchIndex].directory, period)
+		music_dir = mumusic.meshupSongs(self.music_list[int(self.targetIndex)].directory, self.music_list[self.matchIndex].directory, period)
 		
-		pygame.mixer.music.load(music_dir)
-		pygame.mixer.music.play()
-		time.sleep(2)
-		pygame.mixer.music.set_volume(1)
+		if(music_dir != False):
+			pygame.mixer.music.pause()
+			print "Openning: ", music_dir
+			pygame.mixer.music.load(music_dir)
+			pygame.mixer.music.play()
+			time.sleep(2)
+			pygame.mixer.music.set_volume(1)
+		else:
+			tkMessageBox.showwarning("Error", "Songs could not be meshup because they have different number of channels.")
+			return False
 		
 		return True
 	
@@ -282,17 +298,17 @@ class Interface:
 		labelMain = Label(mainLabelFrame, text="Meshup Menu")
 		labelMain.pack()
 		# SOURCES PANEL
-		sourcesFrame = Frame(meshupFrame, relief=GROOVE, width=145, height=145, bd=1)
-		sourcesFrame.place(x=10, y=40)
+		sourcesFrame = Frame(meshupFrame, relief=GROOVE, width=365, height=80, bd=1)
+		sourcesFrame.place(x=7, y=112)
 		labelSFrame = Frame(sourcesFrame, relief=GROOVE, width=145, height=100, bd=1)
 		labelSFrame.place(x=0, y=0)
 		labelSources = Label(labelSFrame, text="Sources")
 		labelSources.pack()
 		musicSourceFrame = Frame(sourcesFrame, relief=GROOVE, width=120, height=115, bd=0)
 		musicSourceFrame.place(x=10, y=30)
-		self.meshupSource1Label = Label(musicSourceFrame, height=3, width=14, text="Target: None")
+		self.meshupSource1Label = Label(musicSourceFrame, height=1, width=14, text="Target: None", anchor="nw")
 		self.meshupSource1Label.grid(row=0)
-		self.meshupSource2Label = Label(musicSourceFrame, height=3, width=14, text="Mtach: None")
+		self.meshupSource2Label = Label(musicSourceFrame, height=1, width=14, text="Match: None", anchor="nw")
 		self.meshupSource2Label.grid(row=1)
 		# ENTRY FRAME
 		meshupFrameEntry = Frame(meshupFrame, relief=GROOVE, width=100, height=30, bd=1)

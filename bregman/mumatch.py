@@ -7,7 +7,7 @@ def randomMatch(targetIndex, music_list):
 	from random import randint
 	print "################# MATCHING ##"
 	print "Using random selection..."
-	print "   Target: ", music_list[int(targetIndex[0])].name
+	print "   Target: ", music_list[int(targetIndex)].name
 	a = randint(0,len(music_list)-1)
 	print "   Match: ", music_list[a].name
 	print "#############################"
@@ -22,13 +22,13 @@ def avgBandMFCC(targetIndex, music_list):
 	import mumfcc
 	print "################# MATCHING ##"
 	print "Using average band MFCC..."
-	print "   Target: ", music_list[int(targetIndex[0])].name
-	print "   TARGET MFCC: ", music_list[int(targetIndex[0])].data.MFCC_features.split(" ")
+	print "   Target: ", music_list[int(targetIndex)].name
+	print "   TARGET MFCC: ", music_list[int(targetIndex)].data.MFCC_features.split(" ")
 	smallestDiff = 10000
 	index = 0
 	for i in range(len(music_list)):
-		if(int(targetIndex[0]) != i):
-			a = music_list[int(targetIndex[0])].data.MFCC_features.split(" ")
+		if(int(targetIndex) != i):
+			a = music_list[int(targetIndex)].data.MFCC_features.split(" ")
 			for j in range(len(a)):
 				a[j] = float(a[j])
 			b = music_list[i].data.MFCC_features.split(" ")
