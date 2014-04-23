@@ -5,8 +5,13 @@ Authors:
   Thiago Lima       - http://github.com/thiagorcdl
   Rafael Salles
 
-########################################
+######################################## DEPENDENCIES
+The GUI currently requires the installation of:
+ - PyGame: http://pygame.org/download.shtml
+ - Bregman: http://bregman.dartmouth.edu/bregman/
+ - Marsyas: http://marsyas.info/
+ - Tkinter: https://docs.python.org/2/library/tkinter.html
+ 
+######################################## PROJECT INFORMATION
+For more information about the design process and implementation see 'paper.pdf' in this folder.
 
-The GUI currently requires the installation of PyGame.
-
-http://pygame.org/download.shtml
